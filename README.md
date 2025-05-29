@@ -57,6 +57,112 @@ agent("What is the square root of 1764")
 
 > **Note**: For the default Amazon Bedrock model provider, you'll need AWS credentials configured and model access enabled for Claude 3.7 Sonnet in the us-west-2 region. See the [Quickstart Guide](https://strandsagents.com/) for details on configuring other model providers.
 
+## Complete Example: Weather Assistant
+
+Here's a complete example showing how to build a simple weather assistant that can check the current weather and provide recommendations:
+
+```python
+import json
+import requests
+from strands import Agent, tool
+
+@tool
+def get_weather(city: str, country_code: str = "US") -> dict:
+    """
+    Get current weather information for a city.
+    
+    Args:
+        city: The name of the city to get weather for
+        country_code: The two-letter country code (default: US)
+        
+    Returns:
+        A dictionary containing weather information
+    """
+    # Replace with your actual API key from OpenWeatherMap
+    API_KEY = "your_api_key_here"
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city},{country_code}&appid={API_KEY}&units=metric"
+    
+    response = requests.get(url)
+    if response.status_code != 200:
+        return {"error": f"Failed to get weather: {response.status_code}"}
+    
+    data = response.json()
+    return {
+        "city": city,
+        "temperature": data["main"]["temp"],
+        "feels_like": data["main"]["feels_like"],
+        "humidity": data["main"]["humidity"],
+        "description": data["weather"][0]["description"],
+        "wind_speed": data["wind"]["speed"]
+    }
+
+@tool
+def get_clothing_recommendation(temperature: float) -> str:
+    """
+    Get clothing recommendations based on temperature.
+    
+    Args:
+        temperature: Temperature in Celsius
+        
+    Returns:
+        String with clothing recommendations
+    """
+    if temperature < 0:
+        return "Heavy winter coat, hat, scarf, gloves, and warm boots"
+    elif temperature < 10:
+        return "Winter coat, hat, and gloves"
+    elif temperature < 20:
+        return "Light jacket or sweater"
+    elif temperature < 25:
+        return "Long sleeves or light sweater"
+    else:
+        return "T-shirt and shorts or light clothing"
+
+# Create the agent with our custom tools
+weather_agent = Agent(
+    tools=[get_weather, get_clothing_recommendation],
+    system_prompt="You are a helpful weather assistant. Use the provided tools to check weather conditions and provide recommendations."
+)
+
+# Example conversation
+def run_weather_assistant():
+    print("Weather Assistant: Hello! I can help you check the weather and provide clothing recommendations.")
+    print("                   Type 'exit' to quit.")
+    
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == "exit":
+            print("Weather Assistant: Goodbye!")
+            break
+            
+        response = weather_agent(user_input)
+        print(f"Weather Assistant: {response}")
+
+if __name__ == "__main__":
+    run_weather_assistant()
+```
+
+Example interactions:
+```
+Weather Assistant: Hello! I can help you check the weather and provide clothing recommendations.
+                   Type 'exit' to quit.
+You: What's the weather like in Seattle?
+Weather Assistant: I'll check the current weather in Seattle for you.
+
+[Tool used: get_weather]
+The current weather in Seattle is:
+- Temperature: 18°C
+- Feels like: 17°C
+- Humidity: 72%
+- Description: light rain
+- Wind speed: 3.6 m/s
+
+Based on the temperature, I'd recommend wearing a light jacket or sweater today. Also, since it's raining, don't forget to bring an umbrella!
+
+You: What should I wear if it's 5 degrees Celsius?
+Weather Assistant: For a temperature of 5°C, I recommend wearing a winter coat, hat, and gloves. It's quite cold, so you'll want to dress warmly with layers underneath your coat.
+```
+
 ## Installation
 
 Ensure you have Python 3.10+ installed, then:
